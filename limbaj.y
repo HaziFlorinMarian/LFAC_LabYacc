@@ -53,8 +53,23 @@ struct CallStack {
 %token <type_id> Integer Float Character Bool String Void
 %token <string> ID CONST
 %token <intval> NR
-%token BGIN END ASSIGN OPERATOR BOOLOPERATOR BEGINSTMT ENDSTMT IF ELSE WHILE FOR CLASS BEGINCLASS ENDCLASS PRIVATE PROTECTED PUBLIC BEGINFNCTN ENDFNCTN RTRN
+%token LOGICAL_AND LOGICAL_OR LS_EQ GR_EQ EQ NOT_EQ
+%token BGIN END ASSIGN BEGINSTMT ENDSTMT IF ELSE WHILE FOR CLASS BEGINCLASS ENDCLASS PRIVATE PROTECTED PUBLIC BEGINFNCTN ENDFNCTN RTRN
 %start progr
+
+%left ','
+%right '='
+%left LOGICAL_OR
+%left LOGICAL_AND
+%left EQ NOT_EQ
+%left '<' '>' LS_EQ GR_EQ
+%left '+' '-'
+%left '*' '/' '%'
+%right '!'
+
+%nonassoc UMINUS
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 %%
 
 DATA_TYPE : Integer   	 {$$ = strdup("Integer");}
@@ -150,8 +165,14 @@ constant : CONST DATA_TYPE ID ASSIGN NR { CheckForErrors(1, $2); pushEmptyVariab
          ;
 
 /* expresii matematice */         
-expr : expr OPERATOR operand
-     | operand
+expr: expr '+' expr
+     |expr '-' expr		
+     |expr '*' expr		
+     |expr '/' expr		
+     |expr '%' expr	
+     |'(' expr ')'				
+     |'-' expr %prec UMINUS			
+     |operand
      ;
 
 /* operanzi */
@@ -162,9 +183,18 @@ operand : ID
         ;
 
 /* expresii in if-uri, while-uri, for-uri */
-boolexpr : boolexpr BOOLOPERATOR expr
-         | expr
-         ;
+boolexpr: '(' boolexpr ')' 
+    |boolexpr '>' boolexpr
+    |boolexpr '<' boolexpr
+    |boolexpr EQ boolexpr
+    |boolexpr NOT_EQ boolexpr		
+    |boolexpr LS_EQ boolexpr		
+    |boolexpr GR_EQ boolexpr		
+    |boolexpr LOGICAL_AND boolexpr	
+    |boolexpr LOGICAL_OR boolexpr	
+    |'!' boolexpr
+    |expr
+    ;
 
 /* if */         
 if_stmt : IF boolexpr BEGINSTMT list ENDSTMT
@@ -406,6 +436,6 @@ void ExitFunction()
 int main(int argc, char** argv){
 yyin=fopen(argv[1],"r");
 yyparse();
-PrintVar();
-PrintFunc();
+//PrintVar();
+//PrintFunc();
 }

@@ -1,6 +1,9 @@
 bool @x;
 const int @y := 2;
-int @z := (@x / 2 * 3);
+int @z := (@x / 2) +5;
+int @zz := @x + (3 * 2 / 4);
+int @zzz := (@x + (-4 * 5));
+
 int @f();
 int @g(int @a);
 int @h(int @a, char @b);
@@ -12,7 +15,7 @@ int @f()
 --begin_function
 bool @florin := 1;
 char @radusiflorin;
-if 1 le 2
+if (@a > @b)
 --begin_stmt
     int @var1 := 5;
     int @var2 := 5;
@@ -21,7 +24,7 @@ if 1 le 2
 
 void @k(int @a)
 --begin_function
-if 1 le 2
+if 1 <= 2
 --begin_stmt
     int @var3 := 5;
     int @var4 := 5;
@@ -53,7 +56,7 @@ protected
 
 int @g(int @a)
 --begin_function
-if 1 le 2
+if 1 <= 2
 
 --begin_stmt
     int @var5 := 5;
@@ -68,13 +71,13 @@ begin_progr
 
 @vec2[0] := 5*8-3;
 
-if 1 le 2
+if 1 <= 2
 --begin_stmt
     int @var7 := 5;
     int @var8 := 5;
 --end_stmt;   
 
-if 3 not equal 4
+if 3 != 4
 --begin_stmt
     int @var9 := 6;
     @var9 := 6;

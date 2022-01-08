@@ -13,8 +13,13 @@
 "bool" {return Bool;}
 "const" {return CONST;}
 "void" {return Void;}
-"+"|"-"|"*"|"/"|"^" {return OPERATOR;} //Pt operatii matematice
-"!"|"&"|"|"|"<"|">"|"le"|"ge"|"not equal"|"equal" {return BOOLOPERATOR;} //Pt expresii boolene
+
+"&&"    {return LOGICAL_AND;}
+"||"    {return LOGICAL_OR;}
+"<="    {return LS_EQ;}
+">="    {return GR_EQ;}
+"=="    {return EQ;}
+"!="    {return NOT_EQ;}
 
 "if" {return IF;}
 "else" {return ELSE;}
