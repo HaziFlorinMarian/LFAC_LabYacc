@@ -166,14 +166,23 @@ constant : CONST DATA_TYPE ID ASSIGN NR { CheckForErrors(1, $2); pushEmptyVariab
 
 /* expresii matematice */         
 expr: expr '+' expr
-     |expr '-' expr		
-     |expr '*' expr		
-     |expr '/' expr		
-     |expr '%' expr	
-     |'(' expr ')'				
-     |'-' expr %prec UMINUS			
-     |operand
-     ;
+	|expr '-' expr
+	|expr '*' expr
+	|expr '/' expr
+	|expr '%' expr
+	|'(' expr ')'
+	|'-' expr %prec UMINUS
+	|expr '>' expr
+	|expr '<' expr
+	|expr EQ expr
+	|expr NOT_EQ expr
+	|expr LS_EQ expr
+	|expr GR_EQ expr
+	|expr LOGICAL_AND expr
+	|expr LOGICAL_OR expr
+	|'!' expr
+	|operand
+	;
 
 /* operanzi */
 operand : ID
@@ -182,30 +191,17 @@ operand : ID
         | ID '[' ID ']'
         ;
 
-/* expresii in if-uri, while-uri, for-uri */
-boolexpr: '(' boolexpr ')' 
-    |boolexpr '>' boolexpr
-    |boolexpr '<' boolexpr
-    |boolexpr EQ boolexpr
-    |boolexpr NOT_EQ boolexpr		
-    |boolexpr LS_EQ boolexpr		
-    |boolexpr GR_EQ boolexpr		
-    |boolexpr LOGICAL_AND boolexpr	
-    |boolexpr LOGICAL_OR boolexpr	
-    |'!' boolexpr
-    |expr
-    ;
 
 /* if */         
-if_stmt : IF boolexpr BEGINSTMT list ENDSTMT
+if_stmt : IF expr BEGINSTMT list ENDSTMT
         ;
 
 /* while */
-while_stmt : WHILE boolexpr BEGINSTMT list ENDSTMT 
+while_stmt : WHILE expr BEGINSTMT list ENDSTMT 
            ;
 
 /* for */
-for_stmt : FOR operand ASSIGN expr ';' boolexpr ';' expr ASSIGN expr ':' BEGINSTMT list ENDSTMT 
+for_stmt : FOR operand ASSIGN expr ';' expr ';' expr ASSIGN expr ':' BEGINSTMT list ENDSTMT 
          ;
 
 /* instructiune */

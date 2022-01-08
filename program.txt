@@ -15,7 +15,7 @@ int @f()
 --begin_function
 bool @florin := 1;
 char @radusiflorin;
-if (@a > @b)
+if @a > (@b + 3) && (@y + 3 * 5 -(7 + @a) || @x)  
 --begin_stmt
     int @var1 := 5;
     int @var2 := 5;
