@@ -980,7 +980,7 @@ YY_RULE_SETUP
 case 31:
 YY_RULE_SETUP
 #line 44 "limbaj.l"
-{strcpy(yylval.string, yytext); return ID;}
+{strcpy(yylval.var_name, yytext); return ID;}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP

@@ -41,7 +41,7 @@
 
 "begin_progr" {return BGIN;}
 "end_progr" {return END;}
-@[_a-zA-Z][_a-zA-Z0-9]* {strcpy(yylval.string, yytext); return ID;}
+@[_a-zA-Z][_a-zA-Z0-9]* {strcpy(yylval.var_name, yytext); return ID;}
 ":=" {return ASSIGN;}
 [0-9]+ { yylval.intval = atoi(yytext); return NR; }
 [ \t] ;

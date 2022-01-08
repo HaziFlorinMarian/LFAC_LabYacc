@@ -1,8 +1,8 @@
-int @x;
+int @x := 3;
 int @x1;
 int @x2;
 int @y;
-int @arr[10];
+float @arr[10];
 
 int @testFunction1(int @param1, float @param2);
 int @testFunction(int @param3, int @param4);

@@ -8,10 +8,6 @@ extern char* yytext;
 extern int yylineno;
 extern int yylin;
 
-//#define YYDEBUG 1
-//yydebug = 1;
-
-
  int totalVar = 0;
  int func_count = 0;
  int scope = 0; // 0 -> Global - 100000+ -> Function
@@ -44,17 +40,19 @@ struct CallStack {
 %}
 
 %union {
-	char string[256]; 
+	char var_name[256];
 	char* type_id;
      int intval;
+     char* string;
 }
 
 %type <type_id> DATA_TYPE
+%type <string> lhs declare_lhs identifier array_access
 %token <type_id> Integer Float Character Bool String Void
-%token <string> ID CONST
+%token <var_name> ID
 %token <intval> NR
 %token LOGICAL_AND LOGICAL_OR LS_EQ GR_EQ EQ NOT_EQ
-%token BGIN END ASSIGN BEGINSTMT ENDSTMT IF ELSE WHILE FOR CLASS BEGINCLASS ENDCLASS PRIVATE PROTECTED PUBLIC BEGINFNCTN ENDFNCTN RTRN
+%token BGIN END ASSIGN BEGINSTMT ENDSTMT IF ELSE WHILE FOR CLASS BEGINCLASS ENDCLASS PRIVATE PROTECTED PUBLIC BEGINFNCTN ENDFNCTN RTRN CONST
 %start progr
 
 %left ','
@@ -72,28 +70,29 @@ struct CallStack {
 %nonassoc ELSE
 %%
 
-DATA_TYPE : Integer   	 {$$ = strdup("Integer");}
-          | Float         {$$ = strdup("Float");}
-          | Character 	 {$$ = strdup("Character");}
-          | Bool          {$$ = strdup("Bool");}
-          | String        {$$ = strdup("String");}
-          | Void          {$$ = strdup("Void");}
+DATA_TYPE : Integer   	 {$$ = strdup("Integer");     }
+          | Float         {$$ = strdup("Float");       }
+          | Character 	 {$$ = strdup("Character");   }
+          | Bool          {$$ = strdup("Bool");        }
+          | String        {$$ = strdup("String");      }
+          | Void          {$$ = strdup("Void");        }
           ;
 
 progr: declaratii bloc {printf("program corect sintactic\n");}
      ;
 
-lhs:  identifier
-     |array_access	
+declare_lhs: identifier                 { $$ = strdup($1); AddNewVariable($1);       }
+            |identifier '[' NR ']'      { $$ = strdup($1); AddArraySize($1, $3);     }
+             ;
+
+lhs:  identifier                        { $$ = strdup($1); }
+     |array_access                      { $$ = strdup($1); }
      ;
 
-identifier: ID
+identifier: ID                          { $$ = strdup($1); }
      ;
 
-array_access: ID '[' array_index ']'
-     ;
-
-array_index: expr
+array_access: ID '[' expr ']'           { $$ = strdup($1); }
      ;
 
 function_call: identifier '(' lista_apel ')'
@@ -109,10 +108,10 @@ declaratii : declaratie ';'
         | descriere_functii ';'
         ;
 
-declaratie : DATA_TYPE ID '(' lista_param ')' { PushFunction($2, $1); }
-           | DATA_TYPE ID '(' ')'  { PushFunction($2, $1); }
-           | DATA_TYPE lhs
-           | DATA_TYPE lhs ASSIGN expr
+declaratie : DATA_TYPE ID '(' lista_param ')'          { PushFunction($2, $1); }
+           | DATA_TYPE ID '(' ')'                      { PushFunction($2, $1); }
+           | DATA_TYPE declare_lhs                     { AddDataType($2, $1); }
+           | DATA_TYPE declare_lhs ASSIGN expr         { AddDataType($2, $1); }
            | constant
            ;
 
@@ -168,7 +167,7 @@ list :  statement ';'
 
 ///PARTE PROPRIE PROIECT
 /* constante */
-constant : CONST DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $2); pushEmptyVariable($3, $2, "true", 0);}
+constant : CONST DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $2); AddConstantVariable($3, $2, "true", 0); }
          ;
 
 /* expresii matematice */         
@@ -291,7 +290,7 @@ int getVariableIndex(char* varName)
 	return -1;
 }
 
-void pushEmptyVariable(char* id, char* type, char* constant, int arrsize)
+void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 {
 	int i = getVariableIndex(id);
 
@@ -309,6 +308,36 @@ void pushEmptyVariable(char* id, char* type, char* constant, int arrsize)
      var_table[totalVar].arrsize = arrsize;
 
 	totalVar++;
+}
+
+void AddNewVariable(char* id)
+{
+     var_table[totalVar].id = strdup(id);
+     var_table[totalVar].line_no = yylineno;
+
+	totalVar++;
+}
+
+void AddArraySize(char* id, int size)
+{
+     var_table[totalVar].id = strdup(id);
+     var_table[totalVar].line_no = yylineno;
+     var_table[totalVar].arrsize = size;
+
+	totalVar++;
+}
+
+void AddDataType(char* id, char* type)
+{
+	int i = getVariableIndex(id);
+
+     if (i == -1)
+     {
+          printf("Internal error!\n");
+          exit(0);
+     }
+
+     var_table[i].data_type = strdup(type);
 }
 
 void PrintErrorAndExit(int x)
@@ -426,7 +455,7 @@ void ResetCallStack()
 
 void EnterFunction()
 {
-     scope += 100000 + getFunctionIndex(yylval.string);
+     scope += 100000 + getFunctionIndex(yylval.var_name);
 }
 void ExitFunction()
 {
