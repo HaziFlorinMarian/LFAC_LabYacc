@@ -436,6 +436,6 @@ void ExitFunction()
 int main(int argc, char** argv){
 yyin=fopen(argv[1],"r");
 yyparse();
-//PrintVar();
+PrintVar();
 //PrintFunc();
 }
