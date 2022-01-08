@@ -1,7 +1,7 @@
 %{
 #include <stdio.h>
 #include<string.h>
-#include<stdlib.h> 
+#include<stdlib.h>
 #include <stdbool.h> 
 extern FILE* yyin;
 extern char* yytext;
@@ -110,13 +110,6 @@ lista_param : param
            ;
             
 param : DATA_TYPE ID { PushParameters($2, $1); }
-      ;
-
-lista_apel_param : param_apel
-           | lista_apel_param ','  param_apel 
-           ;
-            
-param_apel : DATA_TYPE ID { InsertIntoCallStack($2, $1); }
       ;
       
 /* bloc */

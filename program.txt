@@ -1,6 +1,6 @@
 bool @x;
 const int @y := 2;
-int @z := @x / 2;
+int @z := (@x / 2 * 3);
 int @f();
 int @g(int @a);
 int @h(int @a, char @b);
