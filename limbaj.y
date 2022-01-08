@@ -96,7 +96,7 @@ array_access: ID '[' array_index ']'
 array_index: expr
      ;
 
-function_call: identifier '(' lista_param ')'
+function_call: identifier '(' lista_apel ')'
               |identifier '(' ')'
               ;
 
@@ -155,20 +155,11 @@ leave_func: ENDFNCTN { ExitFunction(); }
 
 
 /*descriere functii */
-descriere_functii :  DATA_TYPE ID '(' lista_param ')' enter_func list_function leave_func { CheckForErrors(2, $2); }
-           | DATA_TYPE ID '(' ')' enter_func list_function leave_func { CheckForErrors(2, $2); }
-           | descriere_functii DATA_TYPE ID '(' lista_param ')' enter_func list_function leave_func { CheckForErrors(2, $2); }
-           | descriere_functii DATA_TYPE ID '(' ')' enter_func list_function leave_func { CheckForErrors(2, $2); }
+descriere_functii :  DATA_TYPE ID '(' lista_param ')' enter_func list leave_func { CheckForErrors(2, $2); }
+           | DATA_TYPE ID '(' ')' enter_func list leave_func { CheckForErrors(2, $2); }
+           | descriere_functii DATA_TYPE ID '(' lista_param ')' enter_func list leave_func { CheckForErrors(2, $2); }
+           | descriere_functii DATA_TYPE ID '(' ')' enter_func list leave_func { CheckForErrors(2, $2); }
            ;
-
-/* te lasa sa nu pui Retrun */ 
-list_function : list_function statement ';'
-              | list_function RTRN ID ';'
-              | statement ';'
-              | RTRN ID ';'
-              | list_function RTRN NR ';'
-              | RTRN NR ';'
-              ;
 
 /* lista instructiuni */
 list :  statement ';'
@@ -221,15 +212,15 @@ for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' BEGINSTMT list E
          ;
 
 /* instructiune */
-statement: ID '(' lista_apel ')'
-         | ID '(' ')'
-         | DATA_TYPE lhs
+statement: DATA_TYPE lhs
          | lhs ASSIGN expr
          | DATA_TYPE lhs ASSIGN expr
          | constant
          | if_stmt
          | while_stmt
          | for_stmt
+         | RTRN
+         | RTRN expr
          | function_call
          ;
         
