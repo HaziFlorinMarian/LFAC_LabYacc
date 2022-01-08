@@ -1,0 +1,99 @@
+bool @x;
+const int @y := 2;
+int @z := @x / 2;
+int @f();
+int @g(int @a);
+int @h(int @a, char @b);
+void @j();
+void @k(int @a);
+float @m (int @x, float @y, char @z);
+
+int @f()
+--begin_function
+bool @florin := 1;
+char @radusiflorin;
+if 1 le 2
+--begin_stmt
+    int @var1 := 5;
+    int @var2 := 5;
+--end_stmt;   
+--end_function;
+
+void @k(int @a)
+--begin_function
+if 1 le 2
+--begin_stmt
+    int @var3 := 5;
+    int @var4 := 5;
+--end_stmt;   
+int @radu := 100;
+--end_function;
+
+int @vec0[1000];
+bool @vec1[50];
+char @vec2[100];
+string @vec3[1000];
+
+class @cars2000
+--begin_class
+    int @cq:=5;
+    int @cg(int @ca);
+    int @ch(int @ca, char @cb);
+private
+    bool @cx;
+    const int @cy := 2;
+    int @cz := 50;
+protected
+    int @cf();
+protected 
+    int @ca;
+--end_class @class1;
+
+
+
+int @g(int @a)
+--begin_function
+if 1 le 2
+
+--begin_stmt
+    int @var5 := 5;
+    int @var6 := 5;
+--end_stmt;   
+int @z2 := 50;
+return @z2;
+--end_function;
+
+
+begin_progr
+
+@vec2[0] := 5*8-3;
+
+if 1 le 2
+--begin_stmt
+    int @var7 := 5;
+    int @var8 := 5;
+--end_stmt;   
+
+if 3 not equal 4
+--begin_stmt
+    int @var9 := 6;
+    @var9 := 6;
+--end_stmt;
+
+while 3 < 10
+--begin_stmt
+    @var11 := @var3 + 3;
+    @var12 := @var3 * @var1;
+--end_stmt;
+
+int @var13 := 0;
+int @i;
+
+for @i := 1; @i < 10; @i := @i + 2:
+--begin_stmt
+    @var14 := @var4 + 5 * @var1;
+--end_stmt;
+
+end_progr
+
+
