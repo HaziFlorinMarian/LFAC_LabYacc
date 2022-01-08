@@ -83,6 +83,23 @@ DATA_TYPE : Integer   	 {$$ = strdup("Integer");}
 progr: declaratii bloc {printf("program corect sintactic\n");}
      ;
 
+lhs:  identifier
+     |array_access	
+     ;
+
+identifier: ID
+     ;
+
+array_access: ID '[' array_index ']'
+     ;
+
+array_index: expr
+     ;
+
+function_call: identifier '(' lista_param ')'
+              |identifier '(' ')'
+              ;
+
 /* initializare variabile, clase, functii, explicitare functii */
 declaratii : declaratie ';'
 	   | declaratii declaratie ';'
@@ -92,13 +109,11 @@ declaratii : declaratie ';'
         | descriere_functii ';'
         ;
 
-declaratie : DATA_TYPE ID { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", 0); }
-           | DATA_TYPE ID '(' lista_param ')' { PushFunction($2, $1); }
+declaratie : DATA_TYPE ID '(' lista_param ')' { PushFunction($2, $1); }
            | DATA_TYPE ID '(' ')'  { PushFunction($2, $1); }
-           | DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", 0);}
+           | DATA_TYPE lhs
+           | DATA_TYPE lhs ASSIGN expr
            | constant
-           | DATA_TYPE ID '[' NR ']' { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", $4); }
-           | DATA_TYPE ID '[' NR ']' ASSIGN expr { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", $4); }
            ;
 
 
@@ -124,8 +139,9 @@ lista_param : param
            | lista_param ','  param 
            ;
             
-param : DATA_TYPE ID { PushParameters($2, $1); }
-      ;
+param : DATA_TYPE identifier
+       |DATA_TYPE identifier '[' ']'
+       ;
       
 /* bloc */
 bloc : BGIN list END  
@@ -161,7 +177,7 @@ list :  statement ';'
 
 ///PARTE PROPRIE PROIECT
 /* constante */
-constant : CONST DATA_TYPE ID ASSIGN NR { CheckForErrors(1, $2); pushEmptyVariable($3, $2, "true", 0);}
+constant : CONST DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $2); pushEmptyVariable($3, $2, "true", 0);}
          ;
 
 /* expresii matematice */         
@@ -181,14 +197,14 @@ expr: expr '+' expr
 	|expr LOGICAL_AND expr
 	|expr LOGICAL_OR expr
 	|'!' expr
+     |function_call
 	|operand
 	;
 
 /* operanzi */
-operand : ID
-        | NR
-        | ID '[' NR ']'
-        | ID '[' ID ']'
+operand : identifier
+         |array_access
+         |NR
         ;
 
 
@@ -201,23 +217,20 @@ while_stmt : WHILE expr BEGINSTMT list ENDSTMT
            ;
 
 /* for */
-for_stmt : FOR operand ASSIGN expr ';' expr ';' expr ASSIGN expr ':' BEGINSTMT list ENDSTMT 
+for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' BEGINSTMT list ENDSTMT 
          ;
 
 /* instructiune */
-statement: ID '(' lista_apel ')' { ResetCallStack(); }
-         | ID '(' ')' { ResetCallStack(); }
-         | ID ASSIGN expr
-         | DATA_TYPE ID { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", 0);}
-         | DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", 0);}
-         | DATA_TYPE ID '[' NR ']' { CheckArrayRange($2, $4); }
-         | ID '[' ID ']' ASSIGN expr
-         | ID '[' NR ']' ASSIGN expr { CheckArrayRange($1, $3); }
-         | DATA_TYPE ID '[' NR ']' ASSIGN expr { CheckForErrors(1, $1); pushEmptyVariable($2, $1, "false", $4);}
+statement: ID '(' lista_apel ')'
+         | ID '(' ')'
+         | DATA_TYPE lhs
+         | lhs ASSIGN expr
+         | DATA_TYPE lhs ASSIGN expr
          | constant
          | if_stmt
          | while_stmt
          | for_stmt
+         | function_call
          ;
         
 lista_apel : expr
