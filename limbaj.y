@@ -70,11 +70,11 @@ struct CallStack {
 %nonassoc ELSE
 %%
 
-DATA_TYPE : Integer   	 {$$ = strdup("Integer");     }
-          | Float         {$$ = strdup("Float");       }
-          | Character 	 {$$ = strdup("Character");   }
+DATA_TYPE : Integer   	 {$$ = strdup("Int.");     }
+          | Float         {$$ = strdup("Flo.");       }
+          | Character 	 {$$ = strdup("Char.");   }
           | Bool          {$$ = strdup("Bool");        }
-          | String        {$$ = strdup("String");      }
+          | String        {$$ = strdup("Str.");      }
           | Void          {$$ = strdup("Void");        }
           ;
 
@@ -211,9 +211,9 @@ for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' BEGINSTMT list E
          ;
 
 /* instructiune */
-statement: DATA_TYPE lhs
+statement: DATA_TYPE declare_lhs                       { AddDataType($2, $1); }
          | lhs ASSIGN expr
-         | DATA_TYPE lhs ASSIGN expr
+         | DATA_TYPE declare_lhs ASSIGN expr           { AddDataType($2, $1); }
          | constant
          | if_stmt
          | while_stmt
@@ -466,5 +466,5 @@ int main(int argc, char** argv){
 yyin=fopen(argv[1],"r");
 yyparse();
 PrintVar();
-//PrintFunc();
+PrintFunc();
 }
