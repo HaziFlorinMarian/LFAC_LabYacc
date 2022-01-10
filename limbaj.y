@@ -8,19 +8,24 @@ extern char* yytext;
 extern int yylineno;
 extern int yylin;
 
- int totalVar = 0;
  int func_count = 0;
- int is_new_class = 0;
- int scope = 0;
+ int current_scope = 0;
+ int max_scope = 0;
 
 struct dataType {
      char* id;
      char* data_type;
-     int scope;
      int line_no;
      char* is_constant;
      int arrsize;
-} var_table[100];
+};
+
+struct Nodes {
+     struct dataType var_table[100];
+     int Parent;
+     int totalVar;
+} S[100];
+
 
 struct Func {
      char* Name;
@@ -28,7 +33,6 @@ struct Func {
      char* Return;
      int   line_no;
      char* ParamType[100];
-     char* ParamName[100];
      int   ParamNumber;
 } func_table[100];
 
@@ -131,18 +135,18 @@ lista_param : param
            | lista_param ','  param 
            ;
             
-param : DATA_TYPE identifier            { PushParameters($2, $1); }
-       |DATA_TYPE identifier '[' ']'    { PushParameters($2, $1); }
+param : DATA_TYPE identifier            { PushParameters($1); AddParamToVarList($2, $1); }
+       |DATA_TYPE identifier '[' ']'    { PushParameters($1); AddParamToVarList($2, $1); }
        ;
       
 /* bloc */
 bloc : BGIN { NewScope(); } list END { NewScope(); }
      ;
 
-enter_func: BEGINFNCTN { NewScope(); }
+enter_func: BEGINFNCTN
      ;
 
-leave_func: ENDFNCTN { ExitScope(); }
+leave_func: ENDFNCTN
      ;
 
 
@@ -233,18 +237,24 @@ printf("eroare: %s la linia:%d\n",s,yylineno);
 
 void PrintVar()
 {
-    printf("\n\n");
-	printf("\nSYMBOL\tIS_CONSTANT\tDATATYPE\tSCOPE\tLINE NUMBER\tARRAY SIZE\n");
+     printf("\n\n");
+	printf("\nSYMBOL\tSCOPE\tIS_CONSTANT\tDATATYPE\tLINE NUMBER\tARRAY SIZE\n");
 	printf("_______________________________________\n\n");
-	int i=0;
-	for(i=0; i < totalVar; i++) {
-		printf("%s\t%s\t%s\t%d\t%d\t%d\n", var_table[i].id, var_table[i].is_constant, var_table[i].data_type, var_table[i].scope, var_table[i].line_no, var_table[i].arrsize);
-	}
-	for(i=0;i < totalVar;i++) {
-		free(var_table[i].id);
-		free(var_table[i].data_type);
-		free(var_table[i].is_constant);
-	}
+
+	int i = 0, j = 0;
+
+     for(j=0; j <= max_scope; ++j)
+          for(i=0; i < S[j].totalVar; i++)
+               printf("%s\t%d\t%s\t%s\t%d\t%d\n", S[j].var_table[i].id, j, S[j].var_table[i].is_constant, S[j].var_table[i].data_type, S[j].var_table[i].line_no, S[j].var_table[i].arrsize);
+
+
+     for(j=0; j <= max_scope; ++j)
+          for(i=0; i < S[j].totalVar;i++) {
+               free(S[j].var_table[i].id);
+               free(S[j].var_table[i].data_type);
+               free(S[j].var_table[i].is_constant);
+          }
+
 	printf("\n\n");
 }
 
@@ -256,10 +266,10 @@ void PrintFunc()
 
 	for(int i=0; i < func_count; i++) {
 		printf("%s\t\t%s\t\t%s\t\t%d\t\t%d\n", func_table[i].Name, func_table[i].Scope, func_table[i].Return, func_table[i].ParamNumber, func_table[i].line_no);
-	     printf("PARAM_TYPE\tPARAM_NAME\n");
+	     printf("PARAM_TYPE\t");
 
           for (int j = 0; j <  func_table[i].ParamNumber; ++j)
-               printf("%s\t%s\n", func_table[i].ParamType[j], func_table[i].ParamName[j]);
+               printf("%s\t", func_table[i].ParamType[j]);
 
           printf("\n\n");
 	}
@@ -273,7 +283,6 @@ void PrintFunc()
           for (int j = 0; j <  func_table[i].ParamNumber; ++j)
           {
 		     free(func_table[i].ParamType[j]);
-		     free(func_table[i].ParamName[j]);
           }
 	}
 
@@ -282,8 +291,8 @@ void PrintFunc()
 
 int getVariableIndex(char* varName)
 {
-	for (int i = 0; i < totalVar; i++) 
-		if (strcmp(varName, var_table[i].id) == 0)
+	for (int i = 0; i < S[current_scope].totalVar; i++) 
+		if (strcmp(varName, S[current_scope].var_table[i].id) == 0)
 			return i;
 
 	return -1;
@@ -295,35 +304,40 @@ void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 
 	if (i != -1)
     {
-		printf("The variable %s was already declared on line %d\n", id, var_table[i].line_no);
+		printf("The variable %s was already declared on line %d\n", id, S[current_scope].var_table[i].line_no);
 		exit(0);
 	}
 
-     var_table[totalVar].id = strdup(id);
-     var_table[totalVar].data_type = strdup(type);
-     var_table[totalVar].line_no = yylineno;
-     var_table[totalVar].is_constant = strdup(constant);
-     var_table[totalVar].scope = scope;
-     var_table[totalVar].arrsize = arrsize;
+     int pos = S[current_scope].totalVar;
 
-	totalVar++;
+     S[current_scope].var_table[pos].id = strdup(id);
+     S[current_scope].var_table[pos].data_type = strdup(type);
+     S[current_scope].var_table[pos].line_no = yylineno;
+     S[current_scope].var_table[pos].is_constant = strdup(constant);
+     S[current_scope].var_table[pos].arrsize = arrsize;
+
+	S[current_scope].totalVar++;
 }
 
 void AddNewVariable(char* id)
 {
-     var_table[totalVar].id = strdup(id);
-     var_table[totalVar].line_no = yylineno;
+     int pos = S[current_scope].totalVar;
 
-	totalVar++;
+     S[current_scope].var_table[pos].id = strdup(id);
+     S[current_scope].var_table[pos].line_no = yylineno;
+
+	S[current_scope].totalVar++;
 }
 
 void AddArraySize(char* id, int size)
 {
-     var_table[totalVar].id = strdup(id);
-     var_table[totalVar].line_no = yylineno;
-     var_table[totalVar].arrsize = size;
+     int pos = S[current_scope].totalVar;
 
-	totalVar++;
+     S[current_scope].var_table[pos].id = strdup(id);
+     S[current_scope].var_table[pos].line_no = yylineno;
+     S[current_scope].var_table[pos].arrsize = size;
+
+	S[current_scope].totalVar++;
 }
 
 void AddDataType(char* id, char* type)
@@ -336,7 +350,7 @@ void AddDataType(char* id, char* type)
           exit(0);
      }
 
-     var_table[i].data_type = strdup(type);
+     S[current_scope].var_table[i].data_type = strdup(type);
 }
 
 void PrintErrorAndExit(int x)
@@ -386,7 +400,7 @@ void CheckArrayRange(char* arr, int pos)
      if (i == -1)
           PrintErrorAndExit(4);
 
-     if (pos < 0 || pos > var_table[i].arrsize)
+     if (pos < 0 || pos > S[current_scope].var_table[i].arrsize)
           PrintErrorAndExit(3);
 }
 
@@ -406,22 +420,44 @@ void PushFunction(char* name, char* ret_type)
 	func_count++;
 }
 
-void PushParameters(char* id, char* type)
+void PushParameters(char* type)
 {
      int *j = &func_table[func_count].ParamNumber;
 
      func_table[func_count].ParamType[*j] = strdup(type);
-     func_table[func_count].ParamName[*j] = strdup(id);
 
      (*j)++;
 }
 
+void AddParamToVarList(char* id, char* type)
+{
+	int i = getVariableIndex(id);
+
+     if (i != -1)
+     {
+          printf("Variable %s already declared!!\n", id);
+          exit(0);
+     }
+
+
+     int pos = S[current_scope].totalVar;
+
+     S[current_scope].var_table[pos].id = strdup(id);
+     S[current_scope].var_table[pos].data_type = strdup(type);
+     S[current_scope].var_table[pos].line_no = yylineno;
+
+	S[current_scope].totalVar++;
+}
 
 void NewScope()
 {
+     max_scope++;
+     S[max_scope].Parent = current_scope;
+     current_scope += 1;
 }
 void ExitScope()
 {
+     current_scope -= 1;
 }
 
 int main(int argc, char** argv){

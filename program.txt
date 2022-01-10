@@ -4,6 +4,10 @@ int @z := (@x / 2) +5;
 int @zz := @x + (3 * 2 / 4);
 int @zzz := (@x + (-4 * 5));
 int @v[50];
+int @vec0[1000];
+bool @vec1[50];
+char @vec2[100];
+string @vec3[1000];
 
 int @f()
 --begin_function
@@ -26,11 +30,6 @@ if 1 <= 2
 int @radu := 100;
 --end_function;
 
-int @vec0[1000];
-bool @vec1[50];
-char @vec2[100];
-string @vec3[1000];
-
 class @cars2000
 --begin_class
     int @cq:=5;
@@ -44,7 +43,7 @@ protected
 
 
 
-int @g(int @a, float @b, char @c)
+int @g(int @param1, float @param2, char @param3)
 --begin_function
 if 1 <= 2
 
