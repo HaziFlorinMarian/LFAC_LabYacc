@@ -5,13 +5,6 @@ int @zz := @x + (3 * 2 / 4);
 int @zzz := (@x + (-4 * 5));
 int @v[50];
 
-int @f();
-int @g(int @a);
-int @h(int @a, char @b);
-void @j();
-void @k(int @a);
-float @m (int @x, float @y, char @z);
-
 int @f()
 --begin_function
 bool @florin := 1;
@@ -41,21 +34,17 @@ string @vec3[1000];
 class @cars2000
 --begin_class
     int @cq:=5;
-    int @cg(int @ca);
-    int @ch(int @ca, char @cb);
 private
     bool @cx;
     const int @cy := 2;
     int @cz := 50;
 protected
-    int @cf();
-protected 
     int @ca;
 --end_class @class1;
 
 
 
-int @g(int @a)
+int @g(int @a, float @b, char @c)
 --begin_function
 if 1 <= 2
 

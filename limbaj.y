@@ -10,7 +10,8 @@ extern int yylin;
 
  int totalVar = 0;
  int func_count = 0;
- int scope = 0; // 0 -> Global - 100000+ -> Function
+ int is_new_class = 0;
+ int scope = 0;
 
 struct dataType {
      char* id;
@@ -31,12 +32,6 @@ struct Func {
      int   ParamNumber;
 } func_table[100];
 
-struct CallStack {
-     char* ParamType[100];
-     char* ParamName[100];
-     int   ParamNumber;
-} call_stack;
-
 %}
 
 %union {
@@ -47,7 +42,7 @@ struct CallStack {
 }
 
 %type <type_id> DATA_TYPE
-%type <string> lhs declare_lhs identifier array_access
+%type <string> lhs declare_lhs identifier array_access descriere_functii
 %token <type_id> Integer Float Character Bool String Void
 %token <var_name> ID
 %token <intval> NR
@@ -70,12 +65,12 @@ struct CallStack {
 %nonassoc ELSE
 %%
 
-DATA_TYPE : Integer   	 {$$ = strdup("Int.");     }
-          | Float         {$$ = strdup("Flo.");       }
-          | Character 	 {$$ = strdup("Char.");   }
-          | Bool          {$$ = strdup("Bool");        }
-          | String        {$$ = strdup("Str.");      }
-          | Void          {$$ = strdup("Void");        }
+DATA_TYPE : Integer   	 {$$ = strdup("Int.");   }
+          | Float         {$$ = strdup("Flo.");   }
+          | Character 	 {$$ = strdup("Char.");  }
+          | Bool          {$$ = strdup("Bool");   }
+          | String        {$$ = strdup("Str.");   }
+          | Void          {$$ = strdup("Void");   }
           ;
 
 progr: declaratii bloc {printf("program corect sintactic\n");}
@@ -108,9 +103,7 @@ declaratii : declaratie ';'
         | descriere_functii ';'
         ;
 
-declaratie : DATA_TYPE ID '(' lista_param ')'          { PushFunction($2, $1); }
-           | DATA_TYPE ID '(' ')'                      { PushFunction($2, $1); }
-           | DATA_TYPE declare_lhs                     { AddDataType($2, $1); }
+declaratie : DATA_TYPE declare_lhs                     { AddDataType($2, $1); }
            | DATA_TYPE declare_lhs ASSIGN expr         { AddDataType($2, $1); }
            | constant
            ;
@@ -131,33 +124,33 @@ lista_id_clasa: ID
               | lista_id_clasa ',' ID
               ;
 
-initializare_clasa : CLASS ID BEGINCLASS bloc_clasa ENDCLASS lista_id_clasa ';'
+initializare_clasa : CLASS ID BEGINCLASS { NewScope(); } bloc_clasa ENDCLASS { { ExitScope(); } } lista_id_clasa ';'
                    ;
 
 lista_param : param
            | lista_param ','  param 
            ;
             
-param : DATA_TYPE identifier
-       |DATA_TYPE identifier '[' ']'
+param : DATA_TYPE identifier            { PushParameters($2, $1); }
+       |DATA_TYPE identifier '[' ']'    { PushParameters($2, $1); }
        ;
       
 /* bloc */
-bloc : BGIN list END  
+bloc : BGIN { NewScope(); } list END { NewScope(); }
      ;
 
-enter_func: BEGINFNCTN { EnterFunction(); }
+enter_func: BEGINFNCTN { NewScope(); }
      ;
 
-leave_func: ENDFNCTN { ExitFunction(); }
+leave_func: ENDFNCTN { ExitScope(); }
      ;
 
 
 /*descriere functii */
-descriere_functii :  DATA_TYPE ID '(' lista_param ')' enter_func list leave_func { CheckForErrors(2, $2); }
-           | DATA_TYPE ID '(' ')' enter_func list leave_func { CheckForErrors(2, $2); }
-           | descriere_functii DATA_TYPE ID '(' lista_param ')' enter_func list leave_func { CheckForErrors(2, $2); }
-           | descriere_functii DATA_TYPE ID '(' ')' enter_func list leave_func { CheckForErrors(2, $2); }
+descriere_functii : DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
            ;
 
 /* lista instructiuni */
@@ -198,16 +191,22 @@ operand : identifier
         ;
 
 
+begin_statement: BEGINSTMT { NewScope(); }
+     ;
+
+end_statement: ENDSTMT { ExitScope(); }
+     ;
+
 /* if */         
-if_stmt : IF expr BEGINSTMT list ENDSTMT
+if_stmt : IF expr begin_statement list end_statement
         ;
 
 /* while */
-while_stmt : WHILE expr BEGINSTMT list ENDSTMT 
+while_stmt : WHILE expr begin_statement list end_statement 
            ;
 
 /* for */
-for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' BEGINSTMT list ENDSTMT 
+for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' begin_statement list end_statement 
          ;
 
 /* instructiune */
@@ -348,10 +347,6 @@ void PrintErrorAndExit(int x)
                printf("Cannot have  VOID data type for variables.\n");
                exit(0);
                break;
-          case 2:
-               printf("The header of the function was not declared (line %d).\n", yylineno);
-               exit(0);
-               break;
           case 3:
                printf("Array identified negative or above declared size. (line %d)\n", yylineno);
                exit(0);
@@ -381,14 +376,6 @@ void CheckForErrors(int x, char* var)
           if (strcmp(var, "Void") == 0)
                PrintErrorAndExit(1);
                break;
-          case 2:
-          {
-               int i = getFunctionIndex(var);
-
-               if (i == -1)
-                    PrintErrorAndExit(2);
-               break;
-          }
      }
 }
 
@@ -429,37 +416,12 @@ void PushParameters(char* id, char* type)
      (*j)++;
 }
 
-void InsertIntoCallStack(char* id, char* type)
+
+void NewScope()
 {
-     int *j = &call_stack.ParamNumber;
-
-     call_stack.ParamType[*j] = strdup(type);
-     call_stack.ParamName[*j] = strdup(id);
-
-     (*j)++;
 }
-
-void ResetCallStack()
+void ExitScope()
 {
-     int *j = &call_stack.ParamNumber;
-
-     for (int i = 0; i < *j; ++i)
-     {
-          free(call_stack.ParamType[*j]);
-          free(call_stack.ParamName[*j]);
-     }
-
-     (*j) = 0;
-}
-
-
-void EnterFunction()
-{
-     scope += 100000 + getFunctionIndex(yylval.var_name);
-}
-void ExitFunction()
-{
-     scope = 0;
 }
 
 int main(int argc, char** argv){
