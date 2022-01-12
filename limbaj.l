@@ -43,7 +43,9 @@
 "end_progr" {return END;}
 @[_a-zA-Z][_a-zA-Z0-9]* {strcpy(yylval.var_name, yytext); return ID;}
 ":=" {return ASSIGN;}
-[0-9]+ { yylval.intval = atoi(yytext); return NR; }
+[0-9]+                      { yylval.intval = atoi(yytext);     return NR; }
+\"[^\"\n]*\"                { yylval.strval = strdup(yytext);   return STRING;	}
+[0-9]*\.[0.9]+             { yylval.floatval = atof(yytext);    return FLOAT;}
 [ \t] ;
 \n {yylineno++;}
 . {return *yytext;}

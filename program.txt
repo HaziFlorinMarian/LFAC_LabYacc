@@ -1,13 +1,17 @@
-bool @x;
+int @x := 2;
 const int @y := 2;
-int @z := (@x / 2) +5;
+int @z := (@x / 2) + 5;
 int @zz := @x + (3 * 2 / 4);
-int @zzz := (@x + (-4 * 5));
+int @zzz := (@x + (4 * 5));
 int @v[50];
 int @vec0[1000];
 bool @vec1[50];
 char @vec2[100];
 string @vec3[1000];
+int @a := 5;
+int @b := 6;
+
+
 
 int @f()
 --begin_function
@@ -33,6 +37,11 @@ int @radu := 100;
 class @cars2000
 --begin_class
     int @cq:=5;
+    
+    int @HFM(int @xyz)
+    --begin_function
+    float @hazi := 5;
+    --end_function;
 private
     bool @cx;
     const int @cy := 2;
@@ -58,7 +67,9 @@ return @z2;
 
 begin_progr
 
-@zzz := "Florin";
+@zzz := 1;
+
+@zzz := 17 + 5;
 
 @vec2[0] := 5*8-3;
 
