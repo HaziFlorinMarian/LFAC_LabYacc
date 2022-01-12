@@ -11,9 +11,7 @@ string @vec3[1000];
 int @a := 5;
 int @b := 6;
 
-
-
-int @f()
+int @f(int @param1, float @param2, char @param3)
 --begin_function
 bool @florin := 1;
 char @mno;
@@ -62,7 +60,7 @@ protected
 --end_class @class1;
 
 
-int @g(int @param1, float @param2, char @param3)
+int @g()
 --begin_function
 if 1 <= 2
 
@@ -76,6 +74,9 @@ return @z2;
 
 
 begin_progr
+
+@f(5, 3+7, @g());
+
 int @c := 1;
 @c := 7;
 

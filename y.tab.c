@@ -45,13 +45,15 @@ struct NodesV {
 } S[100];
 
 
-struct Func {
+typedef struct Func {
      char* Name;
      char* Return;
      int   line_no;
      char* ParamType[100];
      int   ParamNumber;
-};
+} Func;
+
+struct Func CalledFunction;
 
 struct NodesF {
      struct Func func_table[100];
@@ -70,7 +72,7 @@ typedef struct VarPos {
 #endif
 #ifndef YYSTYPE_IS_DECLARED
 #define YYSTYPE_IS_DECLARED 1
-#line 50 "limbaj.y"
+#line 52 "limbaj.y"
 typedef union {
 	char var_name[256];
 	char* type_id;
@@ -79,7 +81,7 @@ typedef union {
      char* strval;
 } YYSTYPE;
 #endif /* !YYSTYPE_IS_DECLARED */
-#line 83 "y.tab.c"
+#line 85 "y.tab.c"
 
 /* compatibility with bison */
 #ifdef YYPARSE_PARAM
@@ -598,7 +600,7 @@ typedef struct {
 } YYSTACKDATA;
 /* variables for the parser stack */
 static YYSTACKDATA yystack;
-#line 248 "limbaj.y"
+#line 250 "limbaj.y"
 int yyerror(char * s){
 printf("eroare: %s la linia:%d\n",s,yylineno);
 }
@@ -703,6 +705,17 @@ int SearchLocalVar(char* varName)
 	return -1;
 }
 
+int SearchLocalFunc(char* varName)
+{
+     int fixed_scope = F[current_scope].Parent;
+
+	for (int i = 0; i < F[fixed_scope].totalFunc; i++) 
+		if (strcmp(varName, F[fixed_scope].func_table[i].Name) == 0)
+			return i;
+
+	return -1;
+}
+
 void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 {
 	struct VarPos i = SearchVar(id);
@@ -784,7 +797,7 @@ void PrintErrorAndExit(int x)
                printf("ERROR! You cannot declare more than once same variable (line %d).\n", yylineno);
                exit(0);
           case 6:
-               printf("ERROR! You cannot declare void variable type. (line %d).\n", yylineno);
+               yyerror("ERROR! Trying to call an undefined function.");
                exit(0);
      }
 }
@@ -839,25 +852,24 @@ void CheckArrayRange(char* arr, int pos)
 
 void PushFunction(char* name, char* ret_type)
 {
-	struct VarPos i = SearchFunc(name);
+	int i = SearchLocalFunc(name);
 
-	if (i.pos != -1)
+	if (i != -1)
 		PrintErrorAndExit(5);
 
-     int pos = F[current_scope].totalFunc;
+     int* pos = &F[current_scope].totalFunc;
 
-     F[current_scope].func_table[pos].Name = strdup(name);
-     F[current_scope].func_table[pos].Return = strdup(ret_type);
-     F[current_scope].func_table[pos].line_no = yylineno;
-     
+     F[current_scope].func_table[*pos].Name = strdup(name);
+     F[current_scope].func_table[*pos].Return = strdup(ret_type);
+     F[current_scope].func_table[*pos].line_no = yylineno;
 
-	F[current_scope].totalFunc++;
-
+	(*pos)++;
 }
 
 void PushParameters(char* type)
 {
-     int fixed_scope = current_scope-1;
+     int fixed_scope = F[current_scope].Parent;
+
      int pos = F[fixed_scope].totalFunc;
      int *j = &F[fixed_scope].func_table[pos].ParamNumber;
 
@@ -899,7 +911,8 @@ void NewScope()
 {
      max_scope++;
      S[max_scope].Parent = current_scope;
-     current_scope += max_scope;
+     F[max_scope].Parent = current_scope;
+     current_scope = max_scope;
 }
 void ExitScope()
 {
@@ -943,6 +956,34 @@ char* GetType(int type, char* id)
      }
 }
 
+void AddCallStackFunction(char* name)
+{
+	struct VarPos i = SearchFunc(name);
+
+	if (i.pos == -1)
+		PrintErrorAndExit(6);
+
+     CalledFunction.Name = strdup(name);
+     CalledFunction.line_no = yylineno;
+}
+
+void AddCallParameters(char* type)
+{
+     int *pos = &CalledFunction.ParamNumber;
+     CalledFunction.ParamType[*pos] = strdup(type);
+     (*pos)++;
+}
+
+void CompareFunctions()
+{
+     printf("Name: %s\tParamNumber: %d\n", CalledFunction.Name, CalledFunction.ParamNumber);
+     for (int i = 0; i < CalledFunction.ParamNumber; ++i)
+          printf("%s\t", CalledFunction.ParamType[i]);
+     printf("\n\n");
+
+}
+
+
 int main(int argc, char** argv)
 {
      yyin=fopen(argv[1],"r");
@@ -950,7 +991,7 @@ int main(int argc, char** argv)
      PrintVar();
      PrintFunc();
 }
-#line 954 "y.tab.c"
+#line 995 "y.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */
@@ -1150,238 +1191,246 @@ yyreduce:
     switch (yyn)
     {
 case 1:
-#line 84 "limbaj.y"
+#line 86 "limbaj.y"
 	{yyval.type_id = strdup("Integer");   }
 break;
 case 2:
-#line 85 "limbaj.y"
+#line 87 "limbaj.y"
 	{yyval.type_id = strdup("Float");   }
 break;
 case 3:
-#line 86 "limbaj.y"
+#line 88 "limbaj.y"
 	{yyval.type_id = strdup("Character");  }
 break;
 case 4:
-#line 87 "limbaj.y"
+#line 89 "limbaj.y"
 	{yyval.type_id = strdup("Bool");   }
 break;
 case 5:
-#line 88 "limbaj.y"
+#line 90 "limbaj.y"
 	{yyval.type_id = strdup("String");   }
 break;
 case 6:
-#line 89 "limbaj.y"
+#line 91 "limbaj.y"
 	{yyval.type_id = strdup("Void");   }
 break;
 case 7:
-#line 92 "limbaj.y"
+#line 94 "limbaj.y"
 	{printf("program corect sintactic\n");}
 break;
 case 8:
-#line 95 "limbaj.y"
+#line 97 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[0].strval); AddNewVariable(yystack.l_mark[0].strval);       }
 break;
 case 9:
-#line 96 "limbaj.y"
+#line 98 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[-3].strval); AddArraySize(yystack.l_mark[-3].strval, yystack.l_mark[-1].intval);     }
 break;
 case 10:
-#line 99 "limbaj.y"
+#line 101 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[0].strval); }
 break;
 case 11:
-#line 100 "limbaj.y"
+#line 102 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[0].strval); }
 break;
 case 12:
-#line 103 "limbaj.y"
+#line 105 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[0].var_name); }
 break;
 case 13:
-#line 106 "limbaj.y"
+#line 108 "limbaj.y"
 	{ yyval.strval = strdup(yystack.l_mark[-3].var_name); }
 break;
 case 14:
-#line 109 "limbaj.y"
-	{ yyval.type_id = GetType(2, yystack.l_mark[-3].strval); }
+#line 111 "limbaj.y"
+	{ yyval.type_id = GetType(2, yystack.l_mark[-3].strval); AddCallStackFunction(yystack.l_mark[-3].strval); CompareFunctions(); }
 break;
 case 15:
-#line 110 "limbaj.y"
-	{ yyval.type_id = GetType(2, yystack.l_mark[-2].strval); }
+#line 112 "limbaj.y"
+	{ yyval.type_id = GetType(2, yystack.l_mark[-2].strval); AddCallStackFunction(yystack.l_mark[-2].strval); CompareFunctions(); }
 break;
 case 22:
-#line 122 "limbaj.y"
+#line 124 "limbaj.y"
 	{ CheckIfVoidVariables(yystack.l_mark[-1].type_id); AddDataType(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
 break;
 case 23:
-#line 123 "limbaj.y"
+#line 125 "limbaj.y"
 	{ CheckIfVoidVariables(yystack.l_mark[-1].type_id); AddDataType(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
 break;
 case 36:
-#line 145 "limbaj.y"
+#line 147 "limbaj.y"
 	{ NewScope(); }
 break;
 case 37:
-#line 145 "limbaj.y"
+#line 147 "limbaj.y"
 	{ { ExitScope(); } }
 break;
 case 41:
-#line 152 "limbaj.y"
+#line 154 "limbaj.y"
 	{ PushParameters(yystack.l_mark[-1].type_id); AddParamToVarList(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
 break;
 case 42:
-#line 153 "limbaj.y"
+#line 155 "limbaj.y"
 	{ PushParameters(yystack.l_mark[-3].type_id); AddParamToVarList(yystack.l_mark[-2].strval, yystack.l_mark[-3].type_id); }
 break;
 case 43:
-#line 157 "limbaj.y"
+#line 159 "limbaj.y"
 	{ NewScope(); }
 break;
 case 44:
-#line 157 "limbaj.y"
+#line 159 "limbaj.y"
 	{ ExitScope(); }
 break;
 case 47:
-#line 168 "limbaj.y"
-	{ NewScope(); PushFunction(yystack.l_mark[-1].var_name, yystack.l_mark[-2].type_id); }
+#line 170 "limbaj.y"
+	{ NewScope(); }
 break;
 case 48:
-#line 168 "limbaj.y"
-	{ ExitScope(); }
+#line 170 "limbaj.y"
+	{ ExitScope(); PushFunction(yystack.l_mark[-7].var_name, yystack.l_mark[-8].type_id); }
 break;
 case 49:
-#line 169 "limbaj.y"
-	{ NewScope(); PushFunction(yystack.l_mark[-1].var_name, yystack.l_mark[-2].type_id); }
+#line 171 "limbaj.y"
+	{ NewScope(); }
 break;
 case 50:
-#line 169 "limbaj.y"
-	{ ExitScope(); }
+#line 171 "limbaj.y"
+	{ ExitScope(); PushFunction(yystack.l_mark[-6].var_name, yystack.l_mark[-7].type_id); }
 break;
 case 51:
-#line 170 "limbaj.y"
-	{ NewScope(); PushFunction(yystack.l_mark[-2].type_id, yystack.l_mark[-3].strval); }
+#line 172 "limbaj.y"
+	{ NewScope(); }
 break;
 case 52:
-#line 170 "limbaj.y"
-	{ ExitScope(); }
+#line 172 "limbaj.y"
+	{ ExitScope(); PushFunction(yystack.l_mark[-8].type_id, yystack.l_mark[-9].strval); }
 break;
 case 53:
-#line 171 "limbaj.y"
-	{ NewScope(); PushFunction(yystack.l_mark[-2].type_id, yystack.l_mark[-3].strval); }
+#line 173 "limbaj.y"
+	{ NewScope(); }
 break;
 case 54:
-#line 171 "limbaj.y"
-	{ ExitScope(); }
+#line 173 "limbaj.y"
+	{ ExitScope(); PushFunction(yystack.l_mark[-7].type_id, yystack.l_mark[-8].strval); }
 break;
 case 57:
-#line 181 "limbaj.y"
+#line 183 "limbaj.y"
 	{ CheckIfVoidVariables(yystack.l_mark[-3].type_id); AddConstantVariable(yystack.l_mark[-2].var_name, yystack.l_mark[-3].type_id, "true", 0); yyval.type_id = GetType(1, yystack.l_mark[-2].var_name); }
 break;
 case 58:
-#line 185 "limbaj.y"
-	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
-break;
-case 59:
-#line 186 "limbaj.y"
-	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
-break;
-case 60:
 #line 187 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 61:
+case 59:
 #line 188 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 62:
+case 60:
 #line 189 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 63:
+case 61:
 #line 190 "limbaj.y"
-	{ yyval.type_id = strdup(yystack.l_mark[-1].type_id); }
+	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 64:
+case 62:
 #line 191 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 65:
+case 63:
 #line 192 "limbaj.y"
-	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
+	{ yyval.type_id = strdup(yystack.l_mark[-1].type_id); }
 break;
-case 66:
+case 64:
 #line 193 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 67:
+case 65:
 #line 194 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 68:
+case 66:
 #line 195 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 69:
+case 67:
 #line 196 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 70:
+case 68:
 #line 197 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 71:
+case 69:
 #line 198 "limbaj.y"
 	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
 break;
-case 72:
+case 70:
 #line 199 "limbaj.y"
+	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
+break;
+case 71:
+#line 200 "limbaj.y"
+	{ type_check(yystack.l_mark[-2].type_id, yystack.l_mark[0].type_id); yyval.type_id = strdup(yystack.l_mark[-2].type_id); }
+break;
+case 72:
+#line 201 "limbaj.y"
 	{ yyval.type_id = strdup(yystack.l_mark[0].type_id); }
 break;
 case 73:
-#line 200 "limbaj.y"
+#line 202 "limbaj.y"
 	{ yyval.type_id = strdup(yystack.l_mark[0].type_id); }
 break;
 case 74:
-#line 204 "limbaj.y"
+#line 206 "limbaj.y"
 	{ yyval.type_id = GetType(1, yystack.l_mark[0].strval);        }
 break;
 case 75:
-#line 205 "limbaj.y"
+#line 207 "limbaj.y"
 	{ yyval.type_id = strdup("Integer");     }
 break;
 case 76:
-#line 206 "limbaj.y"
+#line 208 "limbaj.y"
 	{ yyval.type_id = strdup("Integer");     }
 break;
 case 77:
-#line 207 "limbaj.y"
+#line 209 "limbaj.y"
 	{ yyval.type_id = strdup("String"); printf("%s\n", yystack.l_mark[0].strval);     }
 break;
 case 78:
-#line 208 "limbaj.y"
+#line 210 "limbaj.y"
 	{ yyval.type_id = strdup(yystack.l_mark[0].type_id);            }
 break;
 case 79:
-#line 212 "limbaj.y"
+#line 214 "limbaj.y"
 	{ NewScope(); }
 break;
 case 80:
-#line 215 "limbaj.y"
+#line 217 "limbaj.y"
 	{ ExitScope(); }
 break;
 case 84:
-#line 231 "limbaj.y"
-	{ CheckIfVoidVariables(yystack.l_mark[-1].type_id); AddDataType(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
-break;
-case 85:
-#line 232 "limbaj.y"
-	{ CheckIfIsDefined(yystack.l_mark[-2].strval); type_check(GetType(1, yystack.l_mark[-2].strval), yystack.l_mark[0].type_id); }
-break;
-case 86:
 #line 233 "limbaj.y"
 	{ CheckIfVoidVariables(yystack.l_mark[-1].type_id); AddDataType(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
 break;
-#line 1385 "y.tab.c"
+case 85:
+#line 234 "limbaj.y"
+	{ CheckIfIsDefined(yystack.l_mark[-2].strval); type_check(GetType(1, yystack.l_mark[-2].strval), yystack.l_mark[0].type_id); }
+break;
+case 86:
+#line 235 "limbaj.y"
+	{ CheckIfVoidVariables(yystack.l_mark[-1].type_id); AddDataType(yystack.l_mark[0].strval, yystack.l_mark[-1].type_id); }
+break;
+case 95:
+#line 245 "limbaj.y"
+	{ AddCallParameters(yystack.l_mark[0].type_id); }
+break;
+case 96:
+#line 246 "limbaj.y"
+	{ AddCallParameters(yystack.l_mark[0].type_id); }
+break;
+#line 1434 "y.tab.c"
     }
     yystack.s_mark -= yym;
     yystate = *yystack.s_mark;

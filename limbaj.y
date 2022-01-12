@@ -26,13 +26,15 @@ struct NodesV {
 } S[100];
 
 
-struct Func {
+typedef struct Func {
      char* Name;
      char* Return;
      int   line_no;
      char* ParamType[100];
      int   ParamNumber;
-};
+} Func;
+
+struct Func CalledFunction;
 
 struct NodesF {
      struct Func func_table[100];
@@ -106,8 +108,8 @@ identifier: ID                          { $$ = strdup($1); }
 array_access: ID '[' expr ']'           { $$ = strdup($1); }
      ;
 
-function_call : identifier '(' lista_apel ')'     { $$ = GetType(2, $1); }
-              | identifier '(' ')'                { $$ = GetType(2, $1); }
+function_call : identifier '(' lista_apel ')'     { $$ = GetType(2, $1); AddCallStackFunction($1); CompareFunctions(); }
+              | identifier '(' ')'                { $$ = GetType(2, $1); AddCallStackFunction($1); CompareFunctions(); }
               ;
 
 /* initializare variabile, clase, functii, explicitare functii */
@@ -165,10 +167,10 @@ leave_func: ENDFNCTN
 
 
 /*descriere functii */
-descriere_functii : DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } lista_param ')' enter_func list leave_func { ExitScope(); }
-           | DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } ')' enter_func list leave_func { ExitScope(); }
-           | descriere_functii DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } lista_param ')' enter_func list leave_func { ExitScope(); }
-           | descriere_functii DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } ')' enter_func list leave_func { ExitScope(); }
+descriere_functii : DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
            ;
 
 /* lista instructiuni */
@@ -240,8 +242,8 @@ statement: DATA_TYPE declare_lhs                       { CheckIfVoidVariables($1
          | function_call
          ;
         
-lista_apel : expr
-           | lista_apel ',' expr
+lista_apel : expr                  { AddCallParameters($1); }
+           | lista_apel ',' expr   { AddCallParameters($3); }
            ;
 
 %%
@@ -349,6 +351,17 @@ int SearchLocalVar(char* varName)
 	return -1;
 }
 
+int SearchLocalFunc(char* varName)
+{
+     int fixed_scope = F[current_scope].Parent;
+
+	for (int i = 0; i < F[fixed_scope].totalFunc; i++) 
+		if (strcmp(varName, F[fixed_scope].func_table[i].Name) == 0)
+			return i;
+
+	return -1;
+}
+
 void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 {
 	struct VarPos i = SearchVar(id);
@@ -430,7 +443,7 @@ void PrintErrorAndExit(int x)
                printf("ERROR! You cannot declare more than once same variable (line %d).\n", yylineno);
                exit(0);
           case 6:
-               printf("ERROR! You cannot declare void variable type. (line %d).\n", yylineno);
+               yyerror("ERROR! Trying to call an undefined function.");
                exit(0);
      }
 }
@@ -485,25 +498,24 @@ void CheckArrayRange(char* arr, int pos)
 
 void PushFunction(char* name, char* ret_type)
 {
-	struct VarPos i = SearchFunc(name);
+	int i = SearchLocalFunc(name);
 
-	if (i.pos != -1)
+	if (i != -1)
 		PrintErrorAndExit(5);
 
-     int pos = F[current_scope].totalFunc;
+     int* pos = &F[current_scope].totalFunc;
 
-     F[current_scope].func_table[pos].Name = strdup(name);
-     F[current_scope].func_table[pos].Return = strdup(ret_type);
-     F[current_scope].func_table[pos].line_no = yylineno;
-     
+     F[current_scope].func_table[*pos].Name = strdup(name);
+     F[current_scope].func_table[*pos].Return = strdup(ret_type);
+     F[current_scope].func_table[*pos].line_no = yylineno;
 
-	F[current_scope].totalFunc++;
-
+	(*pos)++;
 }
 
 void PushParameters(char* type)
 {
-     int fixed_scope = current_scope-1;
+     int fixed_scope = F[current_scope].Parent;
+
      int pos = F[fixed_scope].totalFunc;
      int *j = &F[fixed_scope].func_table[pos].ParamNumber;
 
@@ -545,7 +557,8 @@ void NewScope()
 {
      max_scope++;
      S[max_scope].Parent = current_scope;
-     current_scope += max_scope;
+     F[max_scope].Parent = current_scope;
+     current_scope = max_scope;
 }
 void ExitScope()
 {
@@ -588,6 +601,33 @@ char* GetType(int type, char* id)
           return F[i.scope].func_table[i.pos].Return;
      }
 }
+
+void AddCallStackFunction(char* name)
+{
+	struct VarPos i = SearchFunc(name);
+
+	if (i.pos == -1)
+		PrintErrorAndExit(6);
+
+     CalledFunction.Name = strdup(name);
+     CalledFunction.line_no = yylineno;
+}
+
+void AddCallParameters(char* type)
+{
+     int *pos = &CalledFunction.ParamNumber;
+     CalledFunction.ParamType[*pos] = strdup(type);
+     (*pos)++;
+}
+
+void CompareFunctions()
+{
+     printf("Name: %s\tParamNumber: %d\n", CalledFunction.Name, CalledFunction.ParamNumber);
+     for (int i = 0; i < CalledFunction.ParamNumber; ++i)
+          printf("%s\t", CalledFunction.ParamType[i]);
+     printf("\n\n");
+}
+
 
 int main(int argc, char** argv)
 {
