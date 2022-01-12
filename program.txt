@@ -24,6 +24,17 @@ if @a > (@b + 3) && (@y + 3 * 5 -(7 + @a) || @x)
 --end_stmt;   
 --end_function;
 
+int @gh()
+--begin_function
+bool @florin := 1;
+char @mno;
+if @a > (@b + 3) && (@y + 3 * 5 -(7 + @a) || @x)  
+--begin_stmt
+    int @var1 := 5;
+    int @var2 := 5;
+--end_stmt;   
+--end_function;
+
 void @k(int @a)
 --begin_function
 if 1 <= 2
@@ -65,12 +76,12 @@ return @z2;
 
 
 begin_progr
+int @c := 1;
+@c := 7;
 
 @zzz := 1;
 
 @zzz := 17 + 5;
-
-@vec2[0] := 5*8-3;
 
 if 1 <= 2
 --begin_stmt
@@ -86,8 +97,9 @@ if 3 != 4
 
 while 3 < 10
 --begin_stmt
-    @var11 := @var3 + 3;
-    @var12 := @var3 * @var1;
+    int @var3;
+    int @var11 := @var3 + 3;
+    int @var12 := @var3 * @var11;
 --end_stmt;
 
 int @var13 := 0;
@@ -95,6 +107,9 @@ int @i;
 
 for @i := 1; @i < 10; @i := @i + 2:
 --begin_stmt
+    int @var4;
+    int @var14;
+    int @var1;
     @var14 := @var4 + 5 * @var1;
 --end_stmt;
 

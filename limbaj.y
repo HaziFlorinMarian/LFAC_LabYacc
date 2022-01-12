@@ -40,6 +40,11 @@ struct NodesF {
      int totalFunc;
 } F[100];
 
+typedef struct VarPos {
+     int pos;
+     int scope;
+} VarPos;
+
 %}
 
 %union {
@@ -114,8 +119,8 @@ declaratii : declaratie ';'
         | descriere_functii ';'
         ;
 
-declaratie : DATA_TYPE declare_lhs { CheckForErrors(1, $1); AddDataType($2, $1); }
-           | DATA_TYPE declare_lhs { CheckForErrors(1, $1); AddDataType($2, $1); } ASSIGN expr
+declaratie : DATA_TYPE declare_lhs { CheckIfVoidVariables($1); AddDataType($2, $1); }
+           | DATA_TYPE declare_lhs { CheckIfVoidVariables($1); AddDataType($2, $1); } ASSIGN expr
            | constant
            ;
 
@@ -160,10 +165,10 @@ leave_func: ENDFNCTN
 
 
 /*descriere functii */
-descriere_functii : DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
-           | DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
-           | descriere_functii DATA_TYPE ID '(' { NewScope(); } lista_param ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
-           | descriere_functii DATA_TYPE ID '(' { NewScope(); } ')' enter_func list leave_func { ExitScope(); PushFunction($2, $1); }
+descriere_functii : DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } lista_param ')' enter_func list leave_func { ExitScope(); }
+           | DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } ')' enter_func list leave_func { ExitScope(); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } lista_param ')' enter_func list leave_func { ExitScope(); }
+           | descriere_functii DATA_TYPE ID '(' { NewScope(); PushFunction($2, $1); } ')' enter_func list leave_func { ExitScope(); }
            ;
 
 /* lista instructiuni */
@@ -173,7 +178,7 @@ list :  statement ';'
 
 ///PARTE PROPRIE PROIECT
 /* constante */
-constant : CONST DATA_TYPE ID ASSIGN expr { CheckForErrors(1, $2); AddConstantVariable($3, $2, "true", 0); $$ = GetType(1, $3); }
+constant : CONST DATA_TYPE ID ASSIGN expr { CheckIfVoidVariables($2); AddConstantVariable($3, $2, "true", 0); $$ = GetType(1, $3); }
          ;
 
 /* expresii matematice */         
@@ -223,9 +228,9 @@ for_stmt : FOR lhs ASSIGN expr ';' expr ';' lhs ASSIGN expr ':' begin_statement 
          ;
 
 /* instructiune */
-statement: DATA_TYPE declare_lhs                       { CheckForErrors(1, $1); AddDataType($2, $1); }
-         | lhs ASSIGN expr
-         | DATA_TYPE declare_lhs { CheckForErrors(1, $1); AddDataType($2, $1); } ASSIGN expr
+statement: DATA_TYPE declare_lhs                       { CheckIfVoidVariables($1); AddDataType($2, $1); }
+         | lhs ASSIGN expr         { CheckIfIsDefined($1); type_check(GetType(1, $1), $3); }
+         | DATA_TYPE declare_lhs { CheckIfVoidVariables($1); AddDataType($2, $1); } ASSIGN expr
          | constant
          | if_stmt
          | while_stmt
@@ -303,7 +308,39 @@ void PrintFunc()
 	printf("\n\n");
 }
 
-int getVariableIndex(char* varName)
+VarPos SearchVar(char* varName)
+{
+     int i = 0, flag = 0, iCurScope = current_scope;
+     struct VarPos result;
+     result.pos = -1;
+     result.scope = -1;
+
+     while (flag == 0)
+     {
+          if (iCurScope == 0)
+               flag = 1;
+
+          for (i = 0; i < S[iCurScope].totalVar; i++)
+          {    
+               if (strcmp(varName, S[iCurScope].var_table[i].id) == 0)
+               {
+                    result.pos = i;
+                    result.scope = iCurScope;
+
+                    return result;
+               }
+          }
+
+          if (i == S[iCurScope].totalVar)
+               iCurScope = S[iCurScope].Parent;
+          else 
+               flag = 1;
+     }
+
+     return result;
+}
+
+int SearchLocalVar(char* varName)
 {
 	for (int i = 0; i < S[current_scope].totalVar; i++) 
 		if (strcmp(varName, S[current_scope].var_table[i].id) == 0)
@@ -314,11 +351,11 @@ int getVariableIndex(char* varName)
 
 void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 {
-	int i = getVariableIndex(id);
+	struct VarPos i = SearchVar(id);
 
-	if (i != -1)
+	if (i.pos != -1)
     {
-		printf("The variable %s was already declared on line %d\n", id, S[current_scope].var_table[i].line_no);
+		printf("The variable %s was already declared on line %d\n", id, S[current_scope].var_table[i.pos].line_no);
 		exit(0);
 	}
 
@@ -335,11 +372,11 @@ void AddConstantVariable(char* id, char* type, char* constant, int arrsize)
 
 void AddNewVariable(char* id)
 {
-     int i = getVariableIndex(id);
+     int i = SearchLocalVar(id);
 
      if (i != -1)
      {
-          printf("ERROR! Variabile %s has been already declared on line %d.\n", id, S[current_scope].var_table[i].line_no);
+          printf("ERROR! Variabile %s has been already declared! (line_no: %d).\n", id, yylineno);
           exit(0);
      }
 
@@ -364,15 +401,15 @@ void AddArraySize(char* id, int size)
 
 void AddDataType(char* id, char* type)
 {
-	int i = getVariableIndex(id);
+	struct VarPos i = SearchVar(id);
 
-     if (i == -1)
+     if (i.pos == -1)
      {
           printf("AddDataType :: Internal error!\n");
           exit(0);
      }
 
-     S[current_scope].var_table[i].data_type = strdup(type);
+     S[current_scope].var_table[i.pos].data_type = strdup(type);
 }
 
 void PrintErrorAndExit(int x)
@@ -398,42 +435,59 @@ void PrintErrorAndExit(int x)
      }
 }
 
-int getFunctionIndex(char* varName)
+VarPos SearchFunc(char* funcName)
 {
-	for (int i = 0; i < F[current_scope].totalFunc; i++) 
-		if (strcmp(varName, F[current_scope].func_table[i].Name) == 0)
-			return i;
+     int i = 0, flag = 0, iCurScope = current_scope;
+     struct VarPos result;
+     result.pos = -1;
+     result.scope = -1;
 
-	return -1;
+     while (flag == 0)
+     {
+          if (iCurScope == 0)
+               flag = 1;
+
+          for (; i < F[iCurScope].totalFunc; i++) 
+               if (strcmp(funcName, F[iCurScope].func_table[i].Name) == 0)
+               {
+                    result.pos = i;
+                    result.scope = iCurScope;
+
+                    return result;
+               }
+
+          if (i == F[iCurScope].totalFunc)
+               iCurScope = F[iCurScope].Parent;
+          else 
+               flag = 1;
+
+          }
+
+     return result;
 }
 
-void CheckForErrors(int x, char* var)
+void CheckIfVoidVariables(char* var)
 {
-     switch(x)
-     {
-          case 1:
-          if (strcmp(var, "Void") == 0)
-               PrintErrorAndExit(1);
-               break;
-     }
+	if (strcmp(var, "Void") == 0)
+		PrintErrorAndExit(1);
 }
 
 void CheckArrayRange(char* arr, int pos)
 {
-     int i = getVariableIndex(arr);
+     struct VarPos i = SearchVar(arr);
 
-     if (i == -1)
+     if (i.pos == -1)
           PrintErrorAndExit(4);
 
-     if (pos < 0 || pos > S[current_scope].var_table[i].arrsize)
+     if (pos < 0 || pos > S[current_scope].var_table[i.pos].arrsize)
           PrintErrorAndExit(3);
 }
 
 void PushFunction(char* name, char* ret_type)
 {
-	int i = getFunctionIndex(name);
+	struct VarPos i = SearchFunc(name);
 
-	if (i != -1)
+	if (i.pos != -1)
 		PrintErrorAndExit(5);
 
      int pos = F[current_scope].totalFunc;
@@ -460,14 +514,13 @@ void PushParameters(char* type)
 
 void AddParamToVarList(char* id, char* type)
 {
-	int i = getVariableIndex(id);
+	int i = SearchLocalVar(id);
 
      if (i != -1)
      {
-          printf("Variable %s already declared!!\n", id);
+          printf("Variable %s already declared!\n (line_no: %d)", id, yylineno);
           exit(0);
      }
-
 
      int pos = S[current_scope].totalVar;
 
@@ -478,101 +531,61 @@ void AddParamToVarList(char* id, char* type)
 	S[current_scope].totalVar++;
 }
 
+void CheckIfIsDefined(char* id)
+{
+     struct VarPos i = SearchVar(id);
+
+     if (i.pos == -1)
+     {
+          PrintErrorAndExit(4);
+     }
+}
+
 void NewScope()
 {
      max_scope++;
      S[max_scope].Parent = current_scope;
-     current_scope += 1;
+     current_scope += max_scope;
 }
 void ExitScope()
 {
-     current_scope -= 1;
+     current_scope = S[current_scope].Parent;
 }
 
 void type_check(char* left, char* right)
 {
 	if(strcmp(left, right) != 0)
      {
-          printf("Type mismatch between operands (%s - %s).\n", left, right);
+          printf("Type mismatch between operands (%s - %s, line_no: %d).\n", left, right, yylineno);
           exit(0);
      }
 }
 
-int FindVariableWithScope(char* varName, int scope)
-{
-	for (int i = 0; i < S[scope].totalVar; i++) 
-		if (strcmp(varName, S[scope].var_table[i].id) == 0)
-			return i;
-
-	return -1;
-}
-
-int FindFunctionWithScope(char* funcName, int scope)
-{
-	for (int i = 0; i < F[scope].totalFunc; i++) 
-		if (strcmp(funcName, F[scope].func_table[i].Name) == 0)
-			return i;
-
-	return -1;
-}
-
 char* GetType(int type, char* id)
 {
-     int i = 0, flag = 0;
-     int iCurScope = current_scope;
-
      if(type == 1)
      {
-          while (flag == 0) {
-               if (iCurScope == 0)
-                    flag = 1;
+          struct VarPos i = SearchVar(id);
 
-               i = FindVariableWithScope(id, iCurScope);
-
-               if (i == -1)
-               {
-                    iCurScope = S[iCurScope].Parent;
-               }
-               else 
-                    flag = 1;
-
-          }
-
-          if (i == -1)
+          if (i.pos == -1)
           {
                printf("Illegal use of undeclared variable! (name: %s, line: %d)\n", id, yylineno);
                exit(0);
           }
 
-          return S[iCurScope].var_table[i].data_type;
+          return S[i.scope].var_table[i.pos].data_type;
      }
      else if (type == 2)
      {
+          struct VarPos i = SearchFunc(id);
 
-          while (flag == 0) {
-               if (iCurScope == 0)
-                    flag = 1;
-
-               i = FindFunctionWithScope(id, iCurScope);
-
-               if (i == -1)
-               {
-                    printf("%d\t%d", iCurScope, F[iCurScope].Parent);
-                    iCurScope = F[iCurScope].Parent;
-               }
-               else 
-                    flag = 1;
-
-          }
-
-          if (i == -1)
+          if (i.pos == -1)
           {
-               printf("%s %d\n", id, yylineno);
                printf("Illegal use of undeclared function! (name: %s, line: %d)\n", id, yylineno);
                exit(0);
           }
 
-          return F[iCurScope].func_table[iCurScope].Return;
+          return F[i.scope].func_table[i.pos].Return;
      }
 }
 
