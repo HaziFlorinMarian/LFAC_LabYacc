@@ -1020,15 +1020,15 @@ yyreduce:
     {
 case 1:
 #line 72 "limbaj.y"
-	{yyval.type_id = strdup("Int.");   }
+	{yyval.type_id = strdup("Integer");   }
 break;
 case 2:
 #line 73 "limbaj.y"
-	{yyval.type_id = strdup("Flo.");   }
+	{yyval.type_id = strdup("Float");   }
 break;
 case 3:
 #line 74 "limbaj.y"
-	{yyval.type_id = strdup("Char.");  }
+	{yyval.type_id = strdup("Character");  }
 break;
 case 4:
 #line 75 "limbaj.y"
@@ -1036,7 +1036,7 @@ case 4:
 break;
 case 5:
 #line 76 "limbaj.y"
-	{yyval.type_id = strdup("Str.");   }
+	{yyval.type_id = strdup("String");   }
 break;
 case 6:
 #line 77 "limbaj.y"

@@ -69,11 +69,11 @@ struct Func {
 %nonassoc ELSE
 %%
 
-DATA_TYPE : Integer   	 {$$ = strdup("Int.");   }
-          | Float         {$$ = strdup("Flo.");   }
-          | Character 	 {$$ = strdup("Char.");  }
+DATA_TYPE : Integer   	 {$$ = strdup("Integer");   }
+          | Float         {$$ = strdup("Float");   }
+          | Character 	 {$$ = strdup("Character");  }
           | Bool          {$$ = strdup("Bool");   }
-          | String        {$$ = strdup("Str.");   }
+          | String        {$$ = strdup("String");   }
           | Void          {$$ = strdup("Void");   }
           ;
 
