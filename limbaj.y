@@ -28,7 +28,6 @@ struct NodesV {
 
 struct Func {
      char* Name;
-     char* Scope;
      char* Return;
      int   line_no;
      char* ParamType[100];
@@ -150,7 +149,7 @@ param : DATA_TYPE identifier            { PushParameters($1); AddParamToVarList(
        ;
       
 /* bloc */
-bloc : BGIN { NewScope(); } list END { NewScope(); }
+bloc : BGIN { NewScope(); } list END { ExitScope(); }
      ;
 
 enter_func: BEGINFNCTN
@@ -278,10 +277,9 @@ void PrintFunc()
      for(j=0; j <= max_scope; ++j)
      {    
           for(i=0; i < F[j].totalFunc; i++) {
-               printf("%s\t\t%s\t\t%s\t\t%d\t\t%d\n", F[j].func_table[i].Name, F[j].func_table[i].Scope, F[j].func_table[i].Return, F[j].func_table[i].ParamNumber, F[j].func_table[i].line_no);
+               printf("%s\t\t%d\t\t%s\t\t%d\t\t%d\n", F[j].func_table[i].Name, j, F[j].func_table[i].Return, F[j].func_table[i].ParamNumber, F[j].func_table[i].line_no);
                printf("PARAM_TYPE\t");
 
-     printf("P R I N T : %d\n", F[j].func_table[i].ParamNumber);
                for (int k = 0; k <  F[j].func_table[i].ParamNumber; ++k)
                     printf("%s\t", F[j].func_table[i].ParamType[k]);
 
@@ -294,7 +292,6 @@ void PrintFunc()
           for(i=0; i < F[j].totalFunc; i++)
           {
                free(F[j].func_table[i].Name);
-               free(F[j].func_table[i].Scope);
                free(F[j].func_table[i].Return);
 
                for (int j = 0; j <  F[j].func_table[i].ParamNumber; ++j)
@@ -444,6 +441,7 @@ void PushFunction(char* name, char* ret_type)
      F[current_scope].func_table[pos].Name = strdup(name);
      F[current_scope].func_table[pos].Return = strdup(ret_type);
      F[current_scope].func_table[pos].line_no = yylineno;
+     
 
 	F[current_scope].totalFunc++;
 
@@ -451,12 +449,11 @@ void PushFunction(char* name, char* ret_type)
 
 void PushParameters(char* type)
 {
-     printf("\t\t\t Current_scope: %d", current_scope);
-     printf("\t\tTotalFunc: %d\n", F[current_scope].totalFunc);
-     int pos = F[current_scope].totalFunc;
-     int *j = &F[current_scope].func_table[pos].ParamNumber;
+     int fixed_scope = current_scope-1;
+     int pos = F[fixed_scope].totalFunc;
+     int *j = &F[fixed_scope].func_table[pos].ParamNumber;
 
-     F[current_scope].func_table[pos].ParamType[*j] = strdup(type);
+     F[fixed_scope].func_table[pos].ParamType[*j] = strdup(type);
 
      (*j)++; 
 }

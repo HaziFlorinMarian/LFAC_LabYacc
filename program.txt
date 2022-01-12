@@ -51,7 +51,6 @@ protected
 --end_class @class1;
 
 
-
 int @g(int @param1, float @param2, char @param3)
 --begin_function
 if 1 <= 2
