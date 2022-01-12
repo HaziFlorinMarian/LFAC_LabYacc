@@ -1,0 +1,33 @@
+int @x := 23;
+int @x1;
+int @x1;
+int @x2;
+float @f1 := 50.0;
+string @s := “ana”’;
+int @testFunction(int @x, float @z)
+--begin_function
+  @param := 2;
+--end_function;
+
+int @testFunction(int @x, float @z)
+--begin_function
+  @x := 3 + 4 + (@x / 3); 
+--end_function;
+
+int @testFunction(float @x, float @z)
+--begin_function
+  @x := 0;
+--end_function;
+
+int @test(int @param)
+--begin_function
+  @param := 9+4;
+--end_function;
+
+begin_progr
+    @x3 := @x + 2;
+	@f1 := @x + x2;
+	@f1 := @test(5) + @x;
+	@x := @s + @f1;
+    @test(@f1);
+end_progr

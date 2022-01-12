@@ -206,7 +206,8 @@ expr: expr '+' expr      { type_check($1, $3); $$ = strdup($1); }
 operand : identifier          { $$ = GetType(1, $1);        }
          |array_access        { $$ = strdup("Integer");     }
          |NR                  { $$ = strdup("Integer");     }
-         |STRING              { $$ = strdup("String"); printf("%s\n", $1);     }
+         |STRING              { $$ = strdup("String");      }
+         |FLOAT               { $$ = strdup("Float");       }
          |function_call       { $$ = strdup($1);            }
         ;
 
